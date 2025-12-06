@@ -59,7 +59,7 @@ export default function Home() {
           <div className="flex items-center justify-center mb-4">
             <Crown className="w-16 h-16 text-amber-500" />
           </div>
-          <h1 className="text-5xl font-bold text-white mb-2">Échecs 1v1</h1>
+          <h1 className="text-5xl font-bold text-white mb-2">Champo Chess</h1>
           <p className="text-slate-300">Créez une partie ou rejoignez un adversaire</p>
         </div>
 
