@@ -40,7 +40,7 @@ export default function Game() {
         subscriptionRef.current.unsubscribe();
       }
     };
-  }, [code]);
+  }, [code, navigate]);
 
   const initializeGame = async () => {
     if (!code) return;
