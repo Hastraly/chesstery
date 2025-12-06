@@ -59,8 +59,8 @@ export default function Home() {
           <div className="flex items-center justify-center mb-4">
             <Crown className="w-16 h-16 text-amber-500" />
           </div>
-          <h1 className="text-5xl font-bold text-white mb-2">Champo Chess</h1>
-          <p className="text-slate-300">Créez une partie ou rejoignez un adversaire</p>
+          <h1 className="text-5xl font-bold text-white mb-2">Chesstery</h1>
+          <p className="text-slate-300">Créez une partie ou affrontez un ami!</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
@@ -86,7 +86,7 @@ export default function Home() {
           <form onSubmit={handleJoinRoom} className="space-y-4">
             <div>
               <label htmlFor="roomCode" className="block text-sm font-medium text-slate-700 mb-2">
-                Code de la partie
+                Code de jeu
               </label>
               <input
                 type="text"
@@ -115,8 +115,8 @@ export default function Home() {
         </div>
 
         <div className="mt-8 text-center text-slate-400 text-sm">
-          <p>Les parties se jouent en temps réel</p>
-          <p className="mt-1">Partagez le code avec votre adversaire pour commencer</p>
+          <p>Partagez le code avec votre adversaire pour commencer</p>
+          <p className="mt-1">Crée et développé par Hastaly avec ♥</p>
         </div>
       </div>
     </div>
