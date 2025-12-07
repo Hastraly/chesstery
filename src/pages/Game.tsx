@@ -52,6 +52,12 @@ export default function Game() {
     }
   }, [room]);
 
+  useEffect(() => {
+    if (roomIdRef.current) {
+      subscribeToRoom(roomIdRef.current);
+    }
+  }, [playerId]);
+
   const initializeGame = async () => {
     if (!code) return;
 
@@ -92,7 +98,12 @@ export default function Game() {
     }
 
     const channel = supabase
-      .channel(`room:${roomId}`)
+      .channel(`room:${roomId}`, {
+        config: {
+          broadcast: { self: true },
+          presence: { key: playerId },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -111,10 +122,7 @@ export default function Game() {
           }
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-        }
-      });
+      .subscribe();
 
     subscriptionRef.current = channel;
   };
@@ -330,7 +338,7 @@ export default function Game() {
                 </div>
               </div>
             </div>
-            <MoveHistory game={game} />
+            <MoveHistory key={game.fen()} game={game} />
           </div>
         </div>
       </div>
