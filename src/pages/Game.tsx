@@ -319,6 +319,7 @@ export default function Game() {
                   </div>
                 )}
                 <ChessBoard
+                  key={game.pgn()}
                   game={game}
                   onMove={handleMove}
                   playerColor={playerColor || 'white'}
