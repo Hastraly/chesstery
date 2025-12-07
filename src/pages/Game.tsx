@@ -49,12 +49,12 @@ export default function Game() {
   }, [code, navigate]);
 
   useEffect(() => {
-    if (room && roomIdRef.current && (!room.white_player_id || !room.black_player_id)) {
+    if (room && roomIdRef.current && room.status === 'waiting') {
       setWaitingForOpponent(true);
-    } else {
+    } else if (room && room.status === 'in_progress') {
       setWaitingForOpponent(false);
     }
-  }, [room]);
+  }, [room?.status, room?.white_player_id, room?.black_player_id]);
 
   useEffect(() => {
     if (roomIdRef.current) {
@@ -171,15 +171,18 @@ export default function Game() {
               if (!error && data) {
                 setRoom((prevRoom) => {
                   if (
-                    prevRoom?.white_player_id !== data.white_player_id ||
-                    prevRoom?.black_player_id !== data.black_player_id ||
-                    prevRoom?.pgn !== data.pgn ||
-                    prevRoom?.status !== data.status ||
-                    prevRoom?.current_turn !== data.current_turn
+                    !prevRoom ||
+                    prevRoom.white_player_id !== data.white_player_id ||
+                    prevRoom.black_player_id !== data.black_player_id ||
+                    prevRoom.pgn !== data.pgn ||
+                    prevRoom.status !== data.status ||
+                    prevRoom.current_turn !== data.current_turn ||
+                    prevRoom.fen !== data.fen
                   ) {
                     updateGameState(data as Room);
+                    return data;
                   }
-                  return prevRoom || data;
+                  return prevRoom;
                 });
               }
             })();
@@ -226,6 +229,8 @@ export default function Game() {
         gameStatus = 'draw';
       }
 
+      setGame(gameCopy);
+
       (async () => {
         await updateRoomState(
           room.id,
@@ -249,8 +254,6 @@ export default function Game() {
           playerColor
         );
       })();
-
-      setGame(gameCopy);
 
       return true;
     } catch (error) {
