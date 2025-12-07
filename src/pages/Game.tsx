@@ -110,13 +110,21 @@ export default function Game() {
 
     const updateGameState = (data: Room) => {
       setRoom(data);
-      const newGame = new Chess();
-      if (data.pgn && data.pgn.length > 0) {
-        newGame.loadPgn(data.pgn);
-      } else {
-        newGame.load(data.fen);
-      }
-      setGame(newGame);
+      setGame((prevGame) => {
+        const currentFen = prevGame.fen();
+        const newFen = data.fen;
+
+        if (currentFen !== newFen) {
+          const newGame = new Chess();
+          if (data.pgn && data.pgn.length > 0) {
+            newGame.loadPgn(data.pgn);
+          } else {
+            newGame.load(data.fen);
+          }
+          return newGame;
+        }
+        return prevGame;
+      });
     };
 
     const channel = supabase
@@ -138,19 +146,9 @@ export default function Game() {
           updateGameState(payload.new as Room);
         }
       )
-      .subscribe(async (status) => {
+      .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          const { data, error } = await supabase
-            .from('rooms')
-            .select('*')
-            .eq('id', roomId)
-            .maybeSingle();
-
-          if (!error && data) {
-            updateGameState(data as Room);
-          }
-
-          pollingRef.current = setInterval(async () => {
+          (async () => {
             const { data, error } = await supabase
               .from('rooms')
               .select('*')
@@ -158,18 +156,33 @@ export default function Game() {
               .maybeSingle();
 
             if (!error && data) {
-              setRoom((prevRoom) => {
-                if (
-                  prevRoom?.white_player_id !== data.white_player_id ||
-                  prevRoom?.black_player_id !== data.black_player_id ||
-                  prevRoom?.pgn !== data.pgn ||
-                  prevRoom?.status !== data.status
-                ) {
-                  updateGameState(data as Room);
-                }
-                return prevRoom || data;
-              });
+              updateGameState(data as Room);
             }
+          })();
+
+          pollingRef.current = setInterval(() => {
+            (async () => {
+              const { data, error } = await supabase
+                .from('rooms')
+                .select('*')
+                .eq('id', roomId)
+                .maybeSingle();
+
+              if (!error && data) {
+                setRoom((prevRoom) => {
+                  if (
+                    prevRoom?.white_player_id !== data.white_player_id ||
+                    prevRoom?.black_player_id !== data.black_player_id ||
+                    prevRoom?.pgn !== data.pgn ||
+                    prevRoom?.status !== data.status ||
+                    prevRoom?.current_turn !== data.current_turn
+                  ) {
+                    updateGameState(data as Room);
+                  }
+                  return prevRoom || data;
+                });
+              }
+            })();
           }, 500);
         }
       });
@@ -365,7 +378,6 @@ export default function Game() {
                   </div>
                 )}
                 <ChessBoard
-                  key={game.pgn()}
                   game={game}
                   onMove={handleMove}
                   playerColor={playerColor || 'white'}
@@ -389,7 +401,7 @@ export default function Game() {
                 </div>
               </div>
             </div>
-            <MoveHistory key={game.pgn()} game={game} />
+            <MoveHistory game={game} />
           </div>
         </div>
       </div>
