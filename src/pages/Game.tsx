@@ -25,7 +25,9 @@ export default function Game() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const subscriptionRef = useRef<any>(null);
+  const roomIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!code) {
@@ -41,6 +43,14 @@ export default function Game() {
       }
     };
   }, [code, navigate]);
+
+  useEffect(() => {
+    if (room && roomIdRef.current && (!room.white_player_id || !room.black_player_id)) {
+      setWaitingForOpponent(true);
+    } else {
+      setWaitingForOpponent(false);
+    }
+  }, [room]);
 
   const initializeGame = async () => {
     if (!code) return;
@@ -64,6 +74,7 @@ export default function Game() {
       return;
     }
 
+    roomIdRef.current = joinedRoom.id;
     setRoom(joinedRoom);
     setPlayerColor(color);
 
@@ -76,6 +87,10 @@ export default function Game() {
   };
 
   const subscribeToRoom = (roomId: string) => {
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+    }
+
     const channel = supabase
       .channel(`room:${roomId}`)
       .on(
@@ -90,17 +105,26 @@ export default function Game() {
           const updatedRoom = payload.new as Room;
           setRoom(updatedRoom);
 
-          const newGame = new Chess(updatedRoom.fen);
-          setGame(newGame);
+          if (updatedRoom.fen) {
+            const newGame = new Chess(updatedRoom.fen);
+            setGame(newGame);
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+        }
+      });
 
     subscriptionRef.current = channel;
   };
 
   const handleMove = (sourceSquare: string, targetSquare: string): boolean => {
     if (!room || !playerColor) return false;
+
+    if (room.status !== 'in_progress') {
+      return false;
+    }
 
     if (room.current_turn !== playerColor) {
       return false;
@@ -131,27 +155,29 @@ export default function Game() {
         gameStatus = 'draw';
       }
 
-      updateRoomState(
-        room.id,
-        gameCopy.fen(),
-        gameCopy.pgn(),
-        newTurn,
-        gameStatus,
-        winner
-      );
+      (async () => {
+        await updateRoomState(
+          room.id,
+          gameCopy.fen(),
+          gameCopy.pgn(),
+          newTurn,
+          gameStatus,
+          winner
+        );
 
-      const moveHistory = gameCopy.history({ verbose: true });
-      const lastMove = moveHistory[moveHistory.length - 1];
+        const moveHistory = gameCopy.history({ verbose: true });
+        const lastMove = moveHistory[moveHistory.length - 1];
 
-      saveMove(
-        room.id,
-        moveHistory.length,
-        lastMove.from,
-        lastMove.to,
-        lastMove.piece,
-        lastMove.san,
-        playerColor
-      );
+        await saveMove(
+          room.id,
+          moveHistory.length,
+          lastMove.from,
+          lastMove.to,
+          lastMove.piece,
+          lastMove.san,
+          playerColor
+        );
+      })();
 
       setGame(gameCopy);
 
@@ -170,6 +196,10 @@ export default function Game() {
 
   const getGameStatusText = () => {
     if (!room) return '';
+
+    if (waitingForOpponent) {
+      return 'En attente du second joueur...';
+    }
 
     switch (room.status) {
       case 'waiting':
@@ -254,7 +284,7 @@ export default function Game() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <div className="bg-slate-800 rounded-2xl p-6 shadow-2xl">
+            <div className="bg-slate-800 rounded-2xl p-6 shadow-2xl relative">
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Clock className="w-5 h-5 text-slate-400" />
@@ -267,16 +297,39 @@ export default function Game() {
                   </span>
                 </div>
               </div>
-              <ChessBoard
-                game={game}
-                onMove={handleMove}
-                playerColor={playerColor || 'white'}
-                isPlayerTurn={room?.current_turn === playerColor && room?.status === 'in_progress'}
-              />
+              <div className="relative">
+                {waitingForOpponent && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center z-10">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4 mx-auto"></div>
+                      <p className="text-white font-medium">En attente de l'adversaire...</p>
+                    </div>
+                  </div>
+                )}
+                <ChessBoard
+                  game={game}
+                  onMove={handleMove}
+                  playerColor={playerColor || 'white'}
+                  isPlayerTurn={room?.current_turn === playerColor && room?.status === 'in_progress' && !waitingForOpponent}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-slate-800 rounded-2xl p-6 shadow-2xl">
+              <h3 className="text-white font-semibold mb-4">Joueurs</h3>
+              <div className="space-y-3">
+                <div className={`rounded-lg p-3 flex items-center gap-3 ${room?.white_player_id ? 'bg-green-900/30' : 'bg-slate-700'}`}>
+                  <div className={`w-3 h-3 rounded-full ${room?.white_player_id ? 'bg-green-400' : 'bg-slate-400'}`}></div>
+                  <span className="text-white text-sm">Blancs {room?.white_player_id ? '✓' : '(en attente)'}</span>
+                </div>
+                <div className={`rounded-lg p-3 flex items-center gap-3 ${room?.black_player_id ? 'bg-green-900/30' : 'bg-slate-700'}`}>
+                  <div className={`w-3 h-3 rounded-full ${room?.black_player_id ? 'bg-green-400' : 'bg-slate-400'}`}></div>
+                  <span className="text-white text-sm">Noirs {room?.black_player_id ? '✓' : '(en attente)'}</span>
+                </div>
+              </div>
+            </div>
             <MoveHistory game={game} />
           </div>
         </div>

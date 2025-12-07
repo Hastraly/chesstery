@@ -17,6 +17,9 @@ export const createRoom = async (): Promise<{ room: Room | null; error: Error | 
     .insert({
       code,
       status: 'waiting',
+      current_turn: 'white',
+      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      pgn: '',
     })
     .select()
     .single();
