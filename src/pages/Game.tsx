@@ -28,6 +28,7 @@ export default function Game() {
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const subscriptionRef = useRef<any>(null);
   const roomIdRef = useRef<string | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!code) {
@@ -40,6 +41,9 @@ export default function Game() {
     return () => {
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
+      }
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
       }
     };
   }, [code, navigate]);
@@ -100,6 +104,21 @@ export default function Game() {
       subscriptionRef.current.unsubscribe();
     }
 
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+
+    const updateGameState = (data: Room) => {
+      setRoom(data);
+      const newGame = new Chess();
+      if (data.pgn && data.pgn.length > 0) {
+        newGame.loadPgn(data.pgn);
+      } else {
+        newGame.load(data.fen);
+      }
+      setGame(newGame);
+    };
+
     const channel = supabase
       .channel(`room:${roomId}`, {
         config: {
@@ -116,17 +135,44 @@ export default function Game() {
           filter: `id=eq.${roomId}`,
         },
         (payload) => {
-          const updatedRoom = payload.new as Room;
-          setRoom(updatedRoom);
-
-          if (updatedRoom.pgn) {
-            const newGame = new Chess();
-            newGame.loadPgn(updatedRoom.pgn);
-            setGame(newGame);
-          }
+          updateGameState(payload.new as Room);
         }
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          const { data, error } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('id', roomId)
+            .maybeSingle();
+
+          if (!error && data) {
+            updateGameState(data as Room);
+          }
+
+          pollingRef.current = setInterval(async () => {
+            const { data, error } = await supabase
+              .from('rooms')
+              .select('*')
+              .eq('id', roomId)
+              .maybeSingle();
+
+            if (!error && data) {
+              setRoom((prevRoom) => {
+                if (
+                  prevRoom?.white_player_id !== data.white_player_id ||
+                  prevRoom?.black_player_id !== data.black_player_id ||
+                  prevRoom?.pgn !== data.pgn ||
+                  prevRoom?.status !== data.status
+                ) {
+                  updateGameState(data as Room);
+                }
+                return prevRoom || data;
+              });
+            }
+          }, 500);
+        }
+      });
 
     subscriptionRef.current = channel;
   };
