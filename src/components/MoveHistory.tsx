@@ -1,47 +1,75 @@
-import { Chess } from 'chess.js';
 import { ScrollText } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface MoveHistoryProps {
-  game: Chess;
+  roomId: string;
 }
 
-export default function MoveHistory({ game }: MoveHistoryProps) {
+interface MoveData {
+  move_number: number;
+  san: string;
+  color: 'white' | 'black';
+}
+
+export default function MoveHistory({ roomId }: MoveHistoryProps) {
   const scrollEndRef = useRef<HTMLDivElement>(null);
+  const [moves, setMoves] = useState<MoveData[]>([]);
+
+  useEffect(() => {
+    const loadMoves = async () => {
+      const { data, error } = await supabase
+        .from('moves')
+        .select('move_number, san, color')
+        .eq('room_id', roomId)
+        .order('move_number', { ascending: true });
+
+      if (!error && data) {
+        setMoves(data);
+      }
+    };
+
+    loadMoves();
+
+    const channel = supabase
+      .channel(`room-moves:${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'moves',
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          setMoves((prev) => [...prev, payload.new as MoveData]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [roomId]);
 
   useEffect(() => {
     if (scrollEndRef.current) {
-      scrollEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      scrollEndRef.current.scrollIntoView({ behavior: 'auto' });
     }
-  }, [game.moves({ verbose: true }).length]);
-
-  const history = game.history({ verbose: true });
-
-  const formatMove = (move: any, index: number) => {
-    const moveNumber = Math.floor(index / 2) + 1;
-    const isWhite = index % 2 === 0;
-
-    return {
-      moveNumber,
-      isWhite,
-      san: move.san,
-    };
-  };
+  }, [moves.length]);
 
   const groupedMoves: Array<{ moveNumber: number; white: string; black?: string }> = [];
 
-  history.forEach((move, index) => {
-    const formatted = formatMove(move, index);
-
-    if (formatted.isWhite) {
+  moves.forEach((move) => {
+    if (move.color === 'white') {
       groupedMoves.push({
-        moveNumber: formatted.moveNumber,
-        white: formatted.san,
+        moveNumber: move.move_number,
+        white: move.san,
       });
     } else {
-      const lastMove = groupedMoves[groupedMoves.length - 1];
-      if (lastMove) {
-        lastMove.black = formatted.san;
+      const existingMove = groupedMoves.find((m) => m.moveNumber === move.move_number);
+      if (existingMove) {
+        existingMove.black = move.san;
       }
     }
   });

@@ -404,7 +404,7 @@ export default function Game() {
                 </div>
               </div>
             </div>
-            <MoveHistory game={game} />
+            {roomIdRef.current && <MoveHistory roomId={roomIdRef.current} />}
           </div>
         </div>
       </div>
