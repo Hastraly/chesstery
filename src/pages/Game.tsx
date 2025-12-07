@@ -84,7 +84,10 @@ export default function Game() {
     setRoom(joinedRoom);
     setPlayerColor(color);
 
-    const chessGame = new Chess(joinedRoom.fen);
+    const chessGame = new Chess();
+    if (joinedRoom.pgn) {
+      chessGame.loadPgn(joinedRoom.pgn);
+    }
     setGame(chessGame);
 
     subscribeToRoom(joinedRoom.id);
@@ -116,8 +119,9 @@ export default function Game() {
           const updatedRoom = payload.new as Room;
           setRoom(updatedRoom);
 
-          if (updatedRoom.fen) {
-            const newGame = new Chess(updatedRoom.fen);
+          if (updatedRoom.pgn) {
+            const newGame = new Chess();
+            newGame.loadPgn(updatedRoom.pgn);
             setGame(newGame);
           }
         }
@@ -338,7 +342,7 @@ export default function Game() {
                 </div>
               </div>
             </div>
-            <MoveHistory key={game.fen()} game={game} />
+            <MoveHistory key={game.pgn()} game={game} />
           </div>
         </div>
       </div>
