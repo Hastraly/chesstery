@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createRoom, getRoomByCode } from '../lib/roomService';
-import { Crown } from 'lucide-react';
+import { Crown, Info, X } from 'lucide-react';
 
 export default function Home() {
   const [roomCode, setRoomCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showCredits, setShowCredits] = useState(false);
   const navigate = useNavigate();
 
   const handleCreateRoom = async () => {
@@ -116,9 +117,74 @@ export default function Home() {
 
         <div className="mt-8 text-center text-slate-400 text-sm">
           <p>Partagez le code avec votre adversaire pour commencer</p>
-          <p className="mt-1">Crée et développé par Hastaly avec ♥</p>
+          <button
+            onClick={() => setShowCredits(true)}
+            className="mt-3 inline-flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <Info className="w-4 h-4" />
+            <span>À propos</span>
+          </button>
         </div>
       </div>
+
+      {showCredits && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
+            <button
+              onClick={() => setShowCredits(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <div className="text-center mb-6">
+              <Crown className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+              <h2 className="text-2xl font-bold text-slate-900">Chesstery</h2>
+              <p className="text-slate-500 text-sm mt-1">Jeu d'échecs multijoueur en ligne</p>
+            </div>
+
+            <div className="space-y-6 text-slate-700">
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">À propos</h3>
+                <p className="text-sm">
+                  Chesstery est une application web moderne pour jouer aux échecs en temps réel avec vos amis.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Technologie</h3>
+                <ul className="text-sm space-y-1">
+                  <li>• <strong>React</strong> - Interface utilisateur</li>
+                  <li>• <strong>TypeScript</strong> - Typage fort</li>
+                  <li>• <strong>Supabase</strong> - Base de données temps réel</li>
+                  <li>• <strong>Chess.js</strong> - Moteur d'échecs</li>
+                  <li>• <strong>React Chessboard</strong> - Rendu du plateau</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-2">Développement</h3>
+                <p className="text-sm">
+                  Créé et développé par <strong>Hastaly</strong> avec passion ♥
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200">
+                <p className="text-xs text-slate-500 text-center">
+                  © 2024 Chesstery. Tous droits réservés.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowCredits(false)}
+              className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
