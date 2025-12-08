@@ -147,7 +147,7 @@ export default function Home() {
               <div>
                 <h3 className="font-semibold text-slate-900 mb-2">À propos</h3>
                 <p className="text-sm">
-                  Chesstery est une application web moderne pour jouer aux échecs en temps réel avec vos amis.
+                  Chesstery est une application web pour jouer aux échecs en temps réel avec vos amis.
                 </p>
               </div>
 
@@ -163,15 +163,15 @@ export default function Home() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-slate-900 mb-2">Développement</h3>
+                <h3 className="font-semibold text-slate-900 mb-2">Développeur</h3>
                 <p className="text-sm">
-                  Créé et développé par <strong>Hastaly</strong> avec passion ♥
+                  Créé et développé par <strong>Hastaly</strong> avec ♥
                 </p>
               </div>
 
               <div className="pt-4 border-t border-slate-200">
                 <p className="text-xs text-slate-500 text-center">
-                  © 2024 Chesstery. Tous droits réservés.
+                  © 2025 Chesstery. Tous droits réservés.
                 </p>
               </div>
             </div>
