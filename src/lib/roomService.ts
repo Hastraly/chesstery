@@ -141,11 +141,13 @@ export const saveMove = async (
   san: string,
   color: 'white' | 'black'
 ): Promise<{ error: Error | null }> => {
+  const actualMoveNumber = Math.ceil(moveNumber / 2);
+
   const { error } = await supabase
     .from('moves')
     .insert({
       room_id: roomId,
-      move_number: moveNumber,
+      move_number: actualMoveNumber,
       from_square: fromSquare,
       to_square: toSquare,
       piece,

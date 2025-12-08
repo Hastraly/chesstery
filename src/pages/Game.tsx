@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Chess } from 'chess.js';
-import { Copy, Check, ArrowLeft, Users, Clock } from 'lucide-react';
+import { Copy, Check, ArrowLeft, Users, Clock, Flag, Handshake } from 'lucide-react';
 import ChessBoard from '../components/ChessBoard';
 import MoveHistory from '../components/MoveHistory';
 import { supabase, Room } from '../lib/supabase';
@@ -26,6 +26,8 @@ export default function Game() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
+  const [showDrawOffer, setShowDrawOffer] = useState(false);
+  const [showAbandon, setShowAbandon] = useState(false);
   const subscriptionRef = useRef<any>(null);
   const roomIdRef = useRef<string | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -296,6 +298,32 @@ export default function Game() {
     }
   };
 
+  const handleProposeDrawn = async () => {
+    if (!room) return;
+    setShowDrawOffer(false);
+    await updateRoomState(
+      room.id,
+      game.fen(),
+      game.pgn(),
+      room.current_turn,
+      'draw'
+    );
+  };
+
+  const handleAbandon = async () => {
+    if (!room) return;
+    setShowAbandon(false);
+    const winner = playerColor === 'white' ? 'black' : 'white';
+    await updateRoomState(
+      room.id,
+      game.fen(),
+      game.pgn(),
+      room.current_turn,
+      'abandoned',
+      winner
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
@@ -403,11 +431,80 @@ export default function Game() {
                   <span className="text-white text-sm">Noirs {room?.black_player_id ? '✓' : '(en attente)'}</span>
                 </div>
               </div>
+
+              {room?.status === 'in_progress' && (
+                <div className="mt-6 space-y-2 pt-4 border-t border-slate-700">
+                  <button
+                    onClick={() => setShowDrawOffer(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-lg transition-colors"
+                  >
+                    <Handshake className="w-4 h-4" />
+                    Match nul
+                  </button>
+                  <button
+                    onClick={() => setShowAbandon(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors"
+                  >
+                    <Flag className="w-4 h-4" />
+                    Abandonner
+                  </button>
+                </div>
+              )}
             </div>
             {roomIdRef.current && <MoveHistory roomId={roomIdRef.current} />}
           </div>
         </div>
       </div>
+
+      {showDrawOffer && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-8 border border-slate-700">
+            <h3 className="text-white text-xl font-semibold mb-4">Proposer un match nul</h3>
+            <p className="text-slate-300 mb-6">
+              Êtes-vous sûr de vouloir proposer un match nul ? Cette action terminera la partie.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDrawOffer(false)}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 px-4 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleProposeDrawn}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-lg transition-colors font-semibold"
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAbandon && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-8 border border-slate-700">
+            <h3 className="text-white text-xl font-semibold mb-4">Abandonner la partie</h3>
+            <p className="text-slate-300 mb-6">
+              Êtes-vous sûr de vouloir abandonner ? Votre adversaire remportera la victoire.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowAbandon(false)}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 px-4 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAbandon}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors font-semibold"
+              >
+                Abandonner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
