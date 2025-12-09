@@ -51,10 +51,9 @@ export default function Game() {
   }, [code, navigate]);
 
   useEffect(() => {
-    if (room && roomIdRef.current && room.status === 'waiting') {
-      setWaitingForOpponent(true);
-    } else if (room && room.status === 'in_progress') {
-      setWaitingForOpponent(false);
+    if (room && roomIdRef.current) {
+      const gameInProgress = room.status === 'in_progress' || (room.white_player_id && room.black_player_id);
+      setWaitingForOpponent(!gameInProgress);
     }
   }, [room?.status, room?.white_player_id, room?.black_player_id]);
 
@@ -432,7 +431,7 @@ export default function Game() {
                 </div>
               </div>
 
-              {room?.status === 'in_progress' && (
+              {(room?.status === 'in_progress' || (room?.white_player_id && room?.black_player_id)) && (
                 <div className="mt-6 space-y-2 pt-4 border-t border-slate-700">
                   <button
                     onClick={() => setShowDrawOffer(true)}
